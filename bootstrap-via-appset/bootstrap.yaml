@@ -1,0 +1,44 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: skyhigh-database-poc
+  namespace: argocd
+spec:
+  goTemplate: true
+  generators:
+  - list:
+      elements:
+      - name: atlas
+        chart: atlas-operator
+        repo: oci://ghcr.io/ariga/charts
+        revision: 0.7.11
+        namespace: atlas
+  template:
+    metadata:
+      name: '{{.name}}'
+      annotations:
+        argocd.argoproj.io/sync-wave: "1"
+    spec:
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+        - CreateNamespace=true
+      destination:
+        namespace: '{{.namespace}}'
+        server: https://kubernetes.default.svc
+      project: default
+      sources:
+      - repoURL: '{{ .repo }}'
+        chart: '{{ .chart }}'
+        targetRevision: '{{ .revision }}'
+        helm:
+          valueFiles:
+          - $values/bootstrap/values/{{ .name }}/values.yaml
+      - repoURL: https://github.com/BetrajJ/atlasdbpoc.git
+        targetRevision: HEAD
+        ref: values
+      - repoURL: https://github.com/BetrajJ/atlasdbpoc.git
+        targetRevision: HEAD
+        path: apps/{{ .name }}

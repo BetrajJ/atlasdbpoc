@@ -1,0 +1,15 @@
+# Atlas Operator configuration
+replicaCount: 1
+image:
+  repository: arigaio/atlas-operator
+  pullPolicy: IfNotPresent
+resources:
+  limits:
+    cpu: 100m
+    memory: 256Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+# Enable CRDs
+atlas:
+  image: arigaio/atlas:latest-integration
