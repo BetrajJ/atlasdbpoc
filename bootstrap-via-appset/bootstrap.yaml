@@ -6,39 +6,36 @@ metadata:
 spec:
   goTemplate: true
   generators:
-  - list:
-      elements:
-      - name: atlas
-        chart: atlas-operator
-        repo: oci://ghcr.io/ariga/charts
-        revision: 0.7.11
-        namespace: atlas
+    - list:
+        elements:
+          - name: atlas
+            chart: charts/atlas-operator
+            repo: ghcr.io/ariga
+            revision: 0.7.11
+            namespace: atlas
   template:
     metadata:
-      name: '{{.name}}'
+      name: '{{ .name }}'
       annotations:
         argocd.argoproj.io/sync-wave: "1"
     spec:
+      project: default
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: '{{ .namespace }}'
       syncPolicy:
         automated:
           prune: true
           selfHeal: true
         syncOptions:
-        - CreateNamespace=true
-      destination:
-        namespace: '{{.namespace}}'
-        server: https://kubernetes.default.svc
-      project: default
+          - CreateNamespace=true
       sources:
-      - repoURL: '{{ .repo }}'
-        chart: '{{ .chart }}'
-        targetRevision: '{{ .revision }}'
-        helm:
-          valueFiles:
-          - $values/bootstrap/values/{{ .name }}/values.yaml
-      - repoURL: https://github.com/BetrajJ/atlasdbpoc.git
-        targetRevision: HEAD
-        ref: values
-      - repoURL: https://github.com/BetrajJ/atlasdbpoc.git
-        targetRevision: HEAD
-        path: apps/{{ .name }}
+        - repoURL: '{{ .repo }}'
+          chart: '{{ .chart }}'
+          targetRevision: '{{ .revision }}'
+          helm:
+            valueFiles:
+              - $values/bootstrap/values/{{ .name }}/values.yaml
+        - repoURL: https://github.com/BetrajJ/atlasdbpoc.git
+          targetRevision: HEAD
+          ref: values
