@@ -1,0 +1,73 @@
+apiVersion: db.atlasgo.io/v1alpha1
+kind: AtlasSchema
+metadata:
+  name: skyhigh-sample-schema
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+spec:
+  credentials:
+    scheme: postgres
+    host: postgres-postgresql.database
+    user: postgres
+    passwordFrom:
+      secretKeyRef:
+        key: POSTGRES_PASSWORD
+        name: postgres-credentials
+        namespace: database
+    database: postgres
+    port: 5432
+    parameters:
+      sslmode: disable
+  schema:
+    sql: |
+      -- Sample schema - replace with DBA's scripts later
+      CREATE TABLE IF NOT EXISTS sample_users (
+        id SERIAL PRIMARY KEY,
+        email VARCHAR(255) UNIQUE NOT NULL,
+        name VARCHAR(255) NOT NULL,
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      );
+      
+      CREATE INDEX IF NOT EXISTS idx_sample_users_email ON sample_users(email);
+      
+      -- Sample data for testing
+      INSERT INTO sample_users (email, name) 
+      VALUES 
+        ('dev1@example.com', 'Dev 1'),
+        ('dev2@example.com', 'Dev 2'),
+        ('qa1@example.com', 'qa 1') 
+      ON CONFLICT (email) DO NOTHING;
+      
+      -- === Sample user creation and privilege testing ===
+
+      -- Create a readonly user
+      DO $$
+      BEGIN
+        IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'readonly_user') THEN
+          CREATE ROLE readonly_user LOGIN PASSWORD 'readonly123';
+        END IF;
+      END
+      $$;
+
+      -- Grant SELECT privilege only
+      GRANT CONNECT ON DATABASE postgres TO readonly_user;
+      GRANT USAGE ON SCHEMA public TO readonly_user;
+      GRANT SELECT ON ALL TABLES IN SCHEMA public TO readonly_user;
+      ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO readonly_user;
+
+      -- Create a readwrite user
+      DO $$
+      BEGIN
+        IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'readwrite_user') THEN
+          CREATE ROLE readwrite_user LOGIN PASSWORD 'readwrite123';
+        END IF;
+      END
+      $$;
+
+      -- Grant SELECT, INSERT, UPDATE, DELETE privileges
+      GRANT CONNECT ON DATABASE postgres TO readwrite_user;
+      GRANT USAGE ON SCHEMA public TO readwrite_user;
+      GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO readwrite_user;
+      ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO readwrite_user;

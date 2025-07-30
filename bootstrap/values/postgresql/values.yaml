@@ -1,0 +1,19 @@
+# PostgreSQL configuration - matches your existing deployment
+auth:
+  existingSecret: "postgres-credentials"
+  secretKeys:
+    postgresPasswordKey: "POSTGRES_PASSWORD"
+  database: "postgres"
+primary:
+  persistence:
+    enabled: true
+    size: 50Gi
+  resources:
+    limits:
+      cpu: 500m
+      memory: 1Gi
+    requests:
+      cpu: 100m
+      memory: 256Mi
+metrics:
+  enabled: false
