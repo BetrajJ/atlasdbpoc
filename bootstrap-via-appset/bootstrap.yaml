@@ -29,13 +29,25 @@ spec:
           selfHeal: true
         syncOptions:
           - CreateNamespace=true
+          - ServerSideApply=true
       sources:
         - repoURL: '{{ .repo }}'
           chart: '{{ .chart }}'
           targetRevision: '{{ .revision }}'
           helm:
-            valueFiles:
-              - $values/bootstrap/values/{{ .name }}/values.yaml
-        - repoURL: https://github.com/BetrajJ/atlasdbpoc.git
-          targetRevision: HEAD
-          ref: values
+            values: |
+              # Atlas Operator configuration
+              replicaCount: 1
+              image:
+                repository: arigaio/atlas-operator
+                pullPolicy: IfNotPresent
+              resources:
+                limits:
+                  cpu: 100m
+                  memory: 256Mi
+                requests:
+                  cpu: 100m
+                  memory: 128Mi
+              # Enable CRDs
+              atlas:
+                image: arigaio/atlas:latest-integration
