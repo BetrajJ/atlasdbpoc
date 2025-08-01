@@ -1,0 +1,22 @@
+apiVersion: db.atlasgo.io/v1alpha1
+kind: AtlasMigration
+metadata:
+  name: user-permissions
+  namespace: database
+  annotations:
+    argocd.argoproj.io/sync-wave: "4"
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+spec:
+  devURLFrom:
+    secretKeyRef:
+      name: postgres-credentials
+      key: dev-url
+  urlFrom:
+    secretKeyRef:
+      name: postgres-credentials
+      key: dev-url
+  dir:
+    configMapRef:
+      name: userpermissions-migrations
+  execOrder: linear
+  baseline: "20250801140000"   
