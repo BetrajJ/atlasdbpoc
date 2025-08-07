@@ -11,7 +11,7 @@ spec:
     secretKeyRef:
       name: postgres-credentials
       key: dev-url
-  
+
   policy:
     diff:
       skip:
@@ -20,7 +20,7 @@ spec:
     lint:
       destructive:
         error: true        # Block destructive changes
-        
+
   schema:
     sql: |
       -- Enhanced schema for POC
@@ -40,9 +40,9 @@ spec:
       );
 
       -- Add some useful indexes
-      CREATE INDEX IF NOT EXISTS idx_demotable_email ON sample_users(email);
-      CREATE INDEX IF NOT EXISTS idx_demotable_status ON sample_users(status);
-      CREATE INDEX IF NOT EXISTS idx_demotable_last_login ON sample_users(last_login);
+      CREATE INDEX IF NOT EXISTS idx_demotable_email ON demotable(email);
+      CREATE INDEX IF NOT EXISTS idx_demotable_status ON demotable(status);
+      CREATE INDEX IF NOT EXISTS idx_demotable_last_login ON demotable(last_login);
 
       -- Simple preferences table (new addition)
       CREATE TABLE IF NOT EXISTS user_preferences (
