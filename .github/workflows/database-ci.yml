@@ -3,7 +3,9 @@ name: Database Schema CI (POC)
 on:
   pull_request:
     paths:
-      - 'apps/postgresql/atlasschema/**'
+      - 'apps/postgresql/**'
+      - 'bootstrap/**'
+      - '.github/workflows/**'
 
 jobs:
   validate-schema:
