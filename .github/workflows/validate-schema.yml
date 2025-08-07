@@ -1,9 +1,11 @@
 name: Validate Database Schema
+
 on:
   pull_request:
     paths:
-    - 'apps/postgresql/**'
-    - 'bootstrap/**'
+      - 'apps/postgresql/**'
+      - 'bootstrap/**'
+
 jobs:
   validate-sql:
     runs-on: ubuntu-latest
@@ -20,29 +22,31 @@ jobs:
           --health-retries 5
         ports:
           - 5432:5432
+
     steps:
-    - uses: actions/checkout@v4
-    - name: Extract SQL from Schema YAML
-      run: |
-        # Extract SQL from AtlasSchema YAML
-        awk '/sql: \|/{flag=1; next} /^[[:space:]]*[^[:space:]]/ && !/^[[:space:]]*--/ && !/^[[:space:]]*$/{if(flag && $0 !~ /^[[:space:]]*sql:/) exit} flag{print}' apps/postgresql/schema.yaml > test-schema.sql
-        echo "Extracted SQL:"
-        cat test-schema.sql
-    - name: Test SQL Scripts
-      env:
-        PGPASSWORD: test
-      run: |
-        echo "Testing extracted SQL scripts..."
-        psql -h localhost -U postgres -d testdb -f test-schema.sql
-        echo "Verifying schema structure..."
-        psql -h localhost -U postgres -d testdb -c "\dt"
-        echo "Checking created users..."
-        psql -h localhost -U postgres -d testdb -c "\du"
-    - name: Validate Kubernetes YAML
-      run: |
-        # Install kubeval for Kubernetes YAML validation
-        wget https://github.com/instrumenta/kubeval/releases/latest/download/kubeval-linux-amd64.tar.gz
-        tar xf kubeval-linux-amd64.tar.gz
-        chmod +x kubeval
-        # Validate all YAML files except GitHub workflows
-        find . -name "*.yaml" -not -path "./.github/*" | xargs ./kubeval
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Atlas CLI
+        run: |
+          curl -sSf https://atlasgo.io/install.sh | sh
+          echo "Atlas CLI installed:"
+          atlas version
+
+      - name: Extract SQL from AtlasSchema YAML
+        run: |
+          awk '/sql: \|/{flag=1; next} /^[[:space:]]*[^[:space:]]/ && !/^[[:space:]]*--/ && !/^[[:space:]]*$/{if(flag && $0 !~ /^[[:space:]]*sql:/) exit} flag{print}' apps/          postgresql/schema1.yaml > test-schema.sql
+          echo "Extracted SQL:"
+          cat test-schema.sql
+
+      - name: Lint SQL with Atlas
+        run: |
+          echo "Linting SQL with Atlas..."
+          atlas schema lint --dev-url "postgres://postgres:test@localhost:5432/testdb" test-schema.sql
+
+      - name: Validate Kubernetes YAML syntax
+        run: |
+          wget https://github.com/instrumenta/kubeval/releases/latest/download/kubeval-linux-amd64.tar.gz
+          tar xf kubeval-linux-amd64.tar.gz
+          chmod +x kubeval
+          find . -name "*.yaml" -not -path "./.github/*" | xargs ./kubeval
