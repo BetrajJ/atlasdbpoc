@@ -29,7 +29,7 @@ jobs:
 
       - name: Install Atlas CLI
         run: |
-          curl -sSf https://atlasgo.io/install.sh | sh
+          curl -sSf https://atlasgo.sh | sh
           echo "Atlas CLI installed:"
           atlas version
 
