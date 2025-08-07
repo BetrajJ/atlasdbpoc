@@ -52,7 +52,7 @@ jobs:
               echo "Processing $schema_file"
               schema_name=$(yq eval '.metadata.name' "$schema_file")
               yq eval '.spec.schema.sql' "$schema_file" > "/tmp/schemas/${schema_name}.sql"
-              echo "✅ Extracted SQL for $schema_name"
+              echo "Extracted SQL for $schema_name"
             fi
           done
 
@@ -70,7 +70,7 @@ jobs:
                 --to "file://$sql_file" \
                 --dry-run
               
-              echo "✅ Schema syntax is valid for $(basename $sql_file)"
+              echo "Schema syntax is valid for $(basename $sql_file)"
             fi
           done
 
@@ -79,7 +79,7 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            const comment = '## 🗄️ Database Schema Validation\n\n✅ Schema syntax validation passed!\n\nReady for deployment.';
+            const comment = '## 🗄️ Database Schema Validation\n\n Schema syntax validation passed!\n\nReady for deployment.';
             
             github.rest.issues.createComment({
               issue_number: context.issue.number,
