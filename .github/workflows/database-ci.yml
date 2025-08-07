@@ -1,11 +1,6 @@
----
 name: Database Schema CI (POC)
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'apps/postgresql/atlasschema**'
   pull_request:
     branches: [main, master]
     paths:
