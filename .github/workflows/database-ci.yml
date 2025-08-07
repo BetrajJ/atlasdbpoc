@@ -79,7 +79,7 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            const comment = '## 🗄️ Database Schema Validation\n\n Schema syntax validation passed!\n\nReady for deployment.';
+            const comment = '##Database Schema Validation\n\n Schema syntax validation passed!\n\nReady for deployment.';
             
             github.rest.issues.createComment({
               issue_number: context.issue.number,
