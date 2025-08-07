@@ -4,8 +4,8 @@ on:
   pull_request:
     paths:
       - 'apps/postgresql/**'
-      - 'bootstrap/**'
       - '.github/workflows/**'
+      - 'bootstrap/**'
 
 jobs:
   validate-schema:
