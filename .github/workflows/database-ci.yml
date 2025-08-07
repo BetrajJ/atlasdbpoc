@@ -39,6 +39,7 @@ jobs:
         run: |
           curl -sSf https://atlasgo.sh | sh
           sudo mv ./atlas /usr/local/bin/
+          atlas version
 
       - name: Install yq
         run: |
