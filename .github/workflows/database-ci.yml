@@ -50,7 +50,7 @@ jobs:
       - name: Extract SQL from YAML files
         run: |
           mkdir -p /tmp/schemas
-          for schema_file in apps/postgresql/*.yaml; do
+          for schema_file in apps/postgresql/atlasschema/*.yaml; do
             if [ -f "$schema_file" ]; then
               echo "Processing $schema_file"
               schema_name=$(yq eval '.metadata.name' "$schema_file")
