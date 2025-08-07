@@ -59,12 +59,14 @@ jobs:
       - name: Test schema syntax
         run: |
           DB_URL="postgres://postgres:postgres@localhost:5432/testdb?sslmode=disable"
+          DEV_URL="docker://postgres/latest"
           for sql_file in /tmp/schemas/*.sql; do
             if [ -f "$sql_file" ]; then
               echo "Testing $(basename $sql_file)..."
               atlas schema apply \
                 --url "$DB_URL" \
                 --to "file://$sql_file" \
+                --dev-url "$DEV_URL" \
                 --dry-run
               echo "Schema syntax is valid for $(basename $sql_file)"
             fi
