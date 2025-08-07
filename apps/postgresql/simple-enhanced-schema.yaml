@@ -31,6 +31,7 @@ spec:
         gender VARCHAR(50),
         age INTEGER CHECK (age >= 0 AND age <= 150),
         phone VARCHAR(20),
+        telephone VARCHAR(20),
         address VARCHAR(255) NOT NULL,
         status VARCHAR(50) DEFAULT 'active',
         last_login TIMESTAMP,
