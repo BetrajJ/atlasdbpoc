@@ -1,0 +1,89 @@
+name: Database Schema CI (POC)
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'apps/postgresql/**'
+  pull_request:
+    branches: [ main, master ]
+    paths:
+      - 'apps/postgresql/**'
+
+jobs:
+  validate-schema:
+    name: Validate Schema
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_USER: postgres
+          POSTGRES_DB: testdb
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Atlas CLI
+        run: |
+          curl -sSf https://atlasgo.sh | sh -s -- --version v0.15.0
+          sudo mv ./atlas /usr/local/bin/
+
+      - name: Install yq
+        run: |
+          sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+          sudo chmod +x /usr/local/bin/yq
+
+      - name: Extract SQL from YAML files
+        run: |
+          mkdir -p /tmp/schemas
+          for schema_file in apps/postgresql/*.yaml; do
+            if [ -f "$schema_file" ]; then
+              echo "Processing $schema_file"
+              schema_name=$(yq eval '.metadata.name' "$schema_file")
+              yq eval '.spec.schema.sql' "$schema_file" > "/tmp/schemas/${schema_name}.sql"
+              echo "✅ Extracted SQL for $schema_name"
+            fi
+          done
+
+      - name: Test schema syntax
+        run: |
+          DB_URL="postgres://postgres:postgres@localhost:5432/testdb?sslmode=disable"
+          
+          for sql_file in /tmp/schemas/*.sql; do
+            if [ -f "$sql_file" ]; then
+              echo "Testing $(basename $sql_file)..."
+              
+              # Just test if schema can be applied
+              atlas schema apply \
+                --url "$DB_URL" \
+                --to "file://$sql_file" \
+                --dry-run
+              
+              echo "✅ Schema syntax is valid for $(basename $sql_file)"
+            fi
+          done
+
+      - name: Comment on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const comment = '## 🗄️ Database Schema Validation\n\n✅ Schema syntax validation passed!\n\nReady for deployment.';
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
