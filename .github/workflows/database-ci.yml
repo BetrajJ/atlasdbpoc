@@ -34,7 +34,8 @@ jobs:
       - name: Install Atlas CLI
         run: |
           curl -sSf https://atlasgo.sh | sh
-          sudo mv ./atlas /usr/local/bin/
+          export PATH="$HOME/.atlas/bin:$PATH"
+          echo "Atlas CLI installed:"
           atlas version
 
       - name: Install yq
