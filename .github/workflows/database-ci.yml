@@ -1,9 +1,12 @@
 name: Database Schema CI (POC)
-
+permissions:
+  contents: read
+  pull-requests: write
+  
 on:
   pull_request:
     paths:
-      - 'apps/postgresql/**'
+      - 'apps/postgresql/atlasschema/**'
       - '.github/workflows/**'
       - 'bootstrap/**'
 
