@@ -1,9 +1,12 @@
 name: Database Schema CI (POC)
-
+permissions:
+  contents: read
+  pull-requests: write
+  
 on:
   pull_request:
     paths:
-      - 'apps/postgresql/**'
+      - 'apps/postgresql/atlasschema/**'
       - '.github/workflows/**'
       - 'bootstrap/**'
 
@@ -34,15 +37,14 @@ jobs:
       - name: Install Atlas CLI
         run: |
           curl -sSf https://atlasgo.sh | sh
-          sudo mv ./atlas /usr/local/bin/
+          export PATH="$HOME/.atlas/bin:$PATH"
+          echo "Atlas CLI installed:"
           atlas version
-
       - name: Install yq
         run: |
           sudo wget -qO /usr/local/bin/yq \
             https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
           sudo chmod +x /usr/local/bin/yq
-
       - name: Extract SQL from YAML files
         run: |
           mkdir -p /tmp/schemas
@@ -54,21 +56,21 @@ jobs:
               echo "Extracted SQL for $schema_name"
             fi
           done
-
       - name: Test schema syntax
         run: |
           DB_URL="postgres://postgres:postgres@localhost:5432/testdb?sslmode=disable"
+          DEV_URL="docker://postgres/latest"
           for sql_file in /tmp/schemas/*.sql; do
             if [ -f "$sql_file" ]; then
               echo "Testing $(basename $sql_file)..."
               atlas schema apply \
                 --url "$DB_URL" \
                 --to "file://$sql_file" \
+                --dev-url "$DEV_URL" \
                 --dry-run
               echo "Schema syntax is valid for $(basename $sql_file)"
             fi
           done
-
       - name: Comment on PR
         if: github.event_name == 'pull_request'
         uses: actions/github-script@v7
