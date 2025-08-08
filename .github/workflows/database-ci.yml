@@ -33,11 +33,10 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
       - name: Install Atlas CLI
         run: |
           curl -sSf https://atlasgo.sh | sh
-          sudo cp $HOME/.atlas/bin/atlas /usr/local/bin/
+          export PATH="$HOME/.atlas/bin:$PATH"
           echo "Atlas CLI installed:"
           atlas version
       - name: Install yq
