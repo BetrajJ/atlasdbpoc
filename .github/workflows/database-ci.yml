@@ -37,7 +37,7 @@ jobs:
       - name: Install Atlas CLI
         run: |
           curl -sSf https://atlasgo.sh | sh
-          export PATH="$HOME/.atlas/bin:$PATH"
+          sudo cp $HOME/.atlas/bin/atlas /usr/local/bin/
           echo "Atlas CLI installed:"
           atlas version
 
