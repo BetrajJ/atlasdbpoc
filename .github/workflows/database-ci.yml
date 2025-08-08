@@ -40,13 +40,11 @@ jobs:
           sudo cp $HOME/.atlas/bin/atlas /usr/local/bin/
           echo "Atlas CLI installed:"
           atlas version
-
       - name: Install yq
         run: |
           sudo wget -qO /usr/local/bin/yq \
             https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
           sudo chmod +x /usr/local/bin/yq
-
       - name: Extract SQL from YAML files
         run: |
           mkdir -p /tmp/schemas
@@ -58,7 +56,6 @@ jobs:
               echo "Extracted SQL for $schema_name"
             fi
           done
-
       - name: Test schema syntax
         run: |
           DB_URL="postgres://postgres:postgres@localhost:5432/testdb?sslmode=disable"
@@ -74,7 +71,6 @@ jobs:
               echo "Schema syntax is valid for $(basename $sql_file)"
             fi
           done
-
       - name: Comment on PR
         if: github.event_name == 'pull_request'
         uses: actions/github-script@v7
