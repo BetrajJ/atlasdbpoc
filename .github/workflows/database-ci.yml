@@ -33,11 +33,21 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
       - name: Install Atlas CLI
         run: |
           curl -sSf https://atlasgo.sh | sh
-          sudo cp $HOME/.atlas/bin/atlas /usr/local/bin/
+      - name: Verify Atlas binary
+        run: ls -l /home/runner/.atlas/bin/
+      - name: Copy Atlas binary
+        run: |
+          if [ -f /home/runner/.atlas/bin/atlas ]; then
+            cp /home/runner/.atlas/bin/atlas /usr/local/bin/
+          else
+            echo "Atlas binary not found!"
+            exit 1
+          fi
+      - name: Check Atlas CLI installation
+        run: |
           echo "Atlas CLI installed:"
           atlas version
       - name: Install yq
