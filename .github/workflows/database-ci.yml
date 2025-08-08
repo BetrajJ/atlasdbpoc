@@ -36,17 +36,22 @@ jobs:
       - name: Install Atlas CLI
         run: |
           curl -sSf https://atlasgo.sh | sh
-      - name: Verify Atlas binary
-        run: ls -l /home/runner/.atlas/bin/
-      - name: Copy Atlas binary
+      - name: Locate Atlas binary
         run: |
-          if [ -f /home/runner/.atlas/bin/atlas ]; then
-            cp /home/runner/.atlas/bin/atlas /usr/local/bin/
+          ATLAS_PATH=$(command -v atlas)
+          echo "Atlas binary found at: $ATLAS_PATH"
+          ls -l "$ATLAS_PATH"
+      - name: Copy Atlas binary to /usr/local/bin
+        run: |
+          ATLAS_PATH=$(command -v atlas)
+          if [ -f "$ATLAS_PATH" ]; then
+            sudo cp "$ATLAS_PATH" /usr/local/bin/atlas
+            echo "Atlas binary copied to /usr/local/bin/"
           else
             echo "Atlas binary not found!"
             exit 1
           fi
-      - name: Check Atlas CLI installation
+      - name: Verify Atlas CLI installation
         run: |
           echo "Atlas CLI installed:"
           atlas version
