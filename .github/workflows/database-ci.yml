@@ -33,7 +33,6 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
       - name: Install Atlas CLI
         run: |
           curl -sSf https://atlasgo.sh | sh
