@@ -67,6 +67,10 @@ jobs:
                 --to "file://$sql_file" \
                 --dev-url "$DEV_URL" \
                 --dry-run
+              atlas schema apply \
+                --url "$DB_URL" \
+                --to "file://$sql_file" \
+                --dev-url "$DEV_URL" 
               echo "Schema syntax is valid for $(basename $sql_file)"
             fi
           done
