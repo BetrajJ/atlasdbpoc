@@ -1,0 +1,216 @@
+apiVersion: db.atlasgo.io/v1alpha1
+kind: AtlasSchema
+metadata:
+  name: skyhigh-postgres-schema
+  namespace: database
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+spec:
+  urlFrom:
+    secretKeyRef:
+      name: postgres-credentials
+      key: dev-url
+  # Define policies to handle existing database safely
+  policy:
+    diff:
+      skip:
+        drop_table: true    # Don't drop existing tables
+        drop_column: false  # Allow column drops if needed
+    lint:
+      destructive:
+        error: true        # Block destructive changes
+  schema:
+    sql: |
+      -- PostgreSQL Schema - Fixed Version
+      
+      -- URLs Table
+      CREATE TABLE IF NOT EXISTS urls(
+        url_id bigint NOT NULL GENERATED ALWAYS AS IDENTITY(START WITH 1 INCREMENT BY 1),
+        url text NOT NULL,
+        db_hash char(24) NOT NULL,
+        md5_hash bytea NULL,
+        CONSTRAINT PK_urls_id PRIMARY KEY (url_id)
+      );
+
+      CREATE INDEX IF NOT EXISTS IX_urls_url_id ON urls (url_id ASC);
+
+      -- Categories Table  
+      CREATE TABLE IF NOT EXISTS categories(
+        cat_id int NOT NULL GENERATED ALWAYS AS IDENTITY(START WITH 1 INCREMENT BY 1),
+        cat_short varchar(2) NOT NULL,
+        cat_frame varchar(10) NOT NULL,
+        cat_long varchar(50) NOT NULL,
+        short_name varchar(2) NULL,
+        cat_code_four int NULL,
+        description text NULL,
+        webrep smallint NOT NULL DEFAULT 0,
+        risk_group varchar(20) NOT NULL,
+        functional_group varchar(30) NULL,
+        modified_by int NULL,
+        modified_date timestamp(6) NOT NULL DEFAULT now(),
+        CONSTRAINT PK_categories_id PRIMARY KEY (cat_id)
+      );
+
+      CREATE INDEX IF NOT EXISTS IX_categories_cat_short ON categories (cat_short ASC);
+
+      -- URL Categories Junction Table
+      CREATE TABLE IF NOT EXISTS url_categories(
+        url_cat_id bigint NOT NULL GENERATED ALWAYS AS IDENTITY(START WITH 1 INCREMENT BY 1),
+        url_id bigint NOT NULL,
+        cat_id int NOT NULL,
+        CONSTRAINT PK_url_categories_id PRIMARY KEY (url_cat_id)
+      );
+
+      -- Add foreign key constraints for url_categories
+      ALTER TABLE url_categories 
+        DROP CONSTRAINT IF EXISTS FK_url_categories_cat_id,
+        ADD CONSTRAINT FK_url_categories_cat_id FOREIGN KEY(cat_id) REFERENCES categories (cat_id);
+
+      ALTER TABLE url_categories 
+        DROP CONSTRAINT IF EXISTS FK_url_categories_url_id,
+        ADD CONSTRAINT FK_url_categories_url_id FOREIGN KEY(url_id) REFERENCES urls (url_id);
+
+      CREATE INDEX IF NOT EXISTS IX_url_categories_url_id ON url_categories (url_id ASC);
+      CREATE INDEX IF NOT EXISTS IX_url_categories_cat_id ON url_categories (cat_id ASC);
+
+      -- Domain Table
+      CREATE TABLE IF NOT EXISTS domain(
+        domain_id int GENERATED ALWAYS AS IDENTITY(START WITH 1 INCREMENT BY 1) NOT NULL,
+        domain_name varchar(256) NULL,
+        modified_by int NULL,
+        modified_date timestamp(6) NOT NULL DEFAULT now(),
+        CONSTRAINT PK_domain_id PRIMARY KEY (domain_id)
+      );
+
+      CREATE INDEX IF NOT EXISTS IX_domain_domain_name ON domain (domain_name ASC);
+
+      -- URL Info Table
+      CREATE TABLE IF NOT EXISTS url_info(
+        url_id bigint NOT NULL,
+        domain_id int NULL,
+        web_reputation int NULL,
+        source varchar(50) NOT NULL,
+        processed_count int NOT NULL DEFAULT 0,
+        memo text NULL,
+        last_modified_by int NULL,
+        last_modified_on timestamp(6) NULL,
+        CONSTRAINT PK_url_info_id PRIMARY KEY (url_id)
+      );
+
+      -- Add foreign key constraints for url_info
+      ALTER TABLE url_info 
+        DROP CONSTRAINT IF EXISTS FK_url_info_url_id,
+        ADD CONSTRAINT FK_url_info_url_id FOREIGN KEY(url_id) REFERENCES urls (url_id);
+
+      ALTER TABLE url_info 
+        DROP CONSTRAINT IF EXISTS FK_url_info_domain_id,
+        ADD CONSTRAINT FK_url_info_domain_id FOREIGN KEY(domain_id) REFERENCES domain (domain_id);
+
+      -- Add check constraint for source field
+      ALTER TABLE url_info 
+        DROP CONSTRAINT IF EXISTS CK_url_info_source,
+        ADD CONSTRAINT CK_url_info_source CHECK (
+          source IN ('Cerberian', 'CLT', 'Customer', 'Legacy', 'N2H2', 'Rulespace', 'WebWasher', 'Saudi', 'Siemens', 'VertexLink')
+        );
+
+      CREATE INDEX IF NOT EXISTS IX_url_info_url_id ON url_info (url_id ASC);
+      CREATE INDEX IF NOT EXISTS IX_url_info_domain_id ON url_info (domain_id ASC);
+      CREATE INDEX IF NOT EXISTS IX_url_info_web_reputation ON url_info (web_reputation ASC);
+
+      -- URL Attribute Types Table
+      CREATE TABLE IF NOT EXISTS url_attribute_types(
+        url_attribute_types_id int GENERATED ALWAYS AS IDENTITY(START WITH 1 INCREMENT BY 1) NOT NULL,
+        attribute varchar(50) NOT NULL,
+        description varchar(255) NULL,
+        gui_ordering int NOT NULL,
+        webrep smallint NOT NULL DEFAULT 0,
+        modified_by int NULL,
+        modified_date timestamp(6) NOT NULL DEFAULT now(),
+        CONSTRAINT PK_url_attribute_types_id PRIMARY KEY (url_attribute_types_id)
+      );
+
+      -- URL Attributes Table
+      CREATE TABLE IF NOT EXISTS url_attributes(
+        url_attributes_id int NOT NULL GENERATED ALWAYS AS IDENTITY(START WITH 1 INCREMENT BY 1),
+        url_id bigint NOT NULL,
+        attribute_type_id int NOT NULL,
+        CONSTRAINT PK_url_attributes_id PRIMARY KEY (url_attributes_id)
+      );
+
+      -- Add foreign key constraints for url_attributes
+      ALTER TABLE url_attributes 
+        DROP CONSTRAINT IF EXISTS FK_url_attributes_attribute_type_id,
+        ADD CONSTRAINT FK_url_attributes_attribute_type_id FOREIGN KEY(attribute_type_id) 
+        REFERENCES url_attribute_types (url_attribute_types_id);
+
+      ALTER TABLE url_attributes 
+        DROP CONSTRAINT IF EXISTS FK_url_attributes_url_id,
+        ADD CONSTRAINT FK_url_attributes_url_id FOREIGN KEY(url_id) REFERENCES urls (url_id);
+
+      CREATE INDEX IF NOT EXISTS IX_url_attributes_url_id ON url_attributes (url_id ASC);
+      CREATE INDEX IF NOT EXISTS IX_url_attributes_attribute_type_id ON url_attributes (attribute_type_id ASC);
+
+      -- Prevalence Table
+      CREATE TABLE IF NOT EXISTS prevalence(
+        prevalence_id int NOT NULL GENERATED ALWAYS AS IDENTITY(START WITH 1 INCREMENT BY 1),
+        url_id bigint NOT NULL,
+        prevalence int NOT NULL,
+        publish_xl boolean NOT NULL DEFAULT false,
+        publish_ts boolean NOT NULL DEFAULT false,
+        modified_by int NULL,
+        modified_date timestamp(6) NOT NULL DEFAULT now(),
+        CONSTRAINT PK_prevalence_id PRIMARY KEY (prevalence_id)
+      );
+
+      ALTER TABLE prevalence 
+        DROP CONSTRAINT IF EXISTS FK_prevalence_url_id,
+        ADD CONSTRAINT FK_prevalence_url_id FOREIGN KEY(url_id) REFERENCES urls (url_id);
+
+      CREATE INDEX IF NOT EXISTS IX_prevalence_url_id ON prevalence (url_id ASC);
+
+      -- Web Reputation Levels Table
+      CREATE TABLE IF NOT EXISTS web_reputation_levels(
+        type_id smallint NOT NULL GENERATED ALWAYS AS IDENTITY(START WITH 1 INCREMENT BY 1),
+        name varchar(20) NOT NULL,
+        description varchar(200) NOT NULL,
+        min smallint NOT NULL,
+        max smallint NOT NULL,
+        CONSTRAINT PK_web_reputation_levels_id PRIMARY KEY (type_id)
+      );
+
+      -- TLDs Table
+      CREATE TABLE IF NOT EXISTS tlds(
+        tld_id int NOT NULL GENERATED ALWAYS AS IDENTITY(START WITH 1 INCREMENT BY 1),
+        tld varchar(50) NOT NULL,
+        cl_hash bytea NULL,
+        active smallint NULL DEFAULT 1,
+        modified_by int NULL,
+        modified_date timestamp(6) NOT NULL DEFAULT now(),
+        CONSTRAINT PK_tlds_id PRIMARY KEY (tld_id)
+      );
+
+      -- Audit Trail Attributes Table
+      CREATE TABLE IF NOT EXISTS audit_trail_attributes(
+        audit_trail_attribute_id int NOT NULL GENERATED ALWAYS AS IDENTITY(START WITH 1 INCREMENT BY 1),
+        attribute varchar(50) NOT NULL,
+        modified_by int NULL,
+        modified_date timestamp(6) NOT NULL DEFAULT now(),
+        CONSTRAINT PK_audit_trail_attributes_id PRIMARY KEY (audit_trail_attribute_id)
+      );
+
+      -- Audit Trail Table
+      CREATE TABLE IF NOT EXISTS audit_trail(
+        audit_trail_id int NOT NULL GENERATED ALWAYS AS IDENTITY(START WITH 1 INCREMENT BY 1),
+        modified_attribute_id int NOT NULL,
+        old_value text NOT NULL,
+        new_value text NOT NULL,
+        modified_by int NULL,
+        modified_date timestamp(6) NOT NULL DEFAULT now(),
+        CONSTRAINT PK_audit_trail_id PRIMARY KEY (audit_trail_id)
+      );
+
+      ALTER TABLE audit_trail 
+        DROP CONSTRAINT IF EXISTS FK_audit_trail_audit_trail_id,
+        ADD CONSTRAINT FK_audit_trail_audit_trail_id FOREIGN KEY(modified_attribute_id) 
+        REFERENCES audit_trail_attributes (audit_trail_attribute_id);
