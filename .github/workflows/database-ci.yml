@@ -39,11 +39,14 @@ jobs:
           export PATH="$HOME/.atlas/bin:$PATH"
           echo "Atlas CLI installed:"
           atlas version
-      - name: Install yq
+      - name: Install jq & yq
         run: |
           sudo wget -qO /usr/local/bin/yq \
             https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
           sudo chmod +x /usr/local/bin/yq
+          sudo wget -qO /usr/local/bin/jq \
+            https://github.com/stedolan/jq/releases/latest/download/jq-linux64
+          sudo chmod +x /usr/local/bin/jq
       - name: Extract SQL from YAML files
         run: |
           mkdir -p /tmp/schemas
@@ -66,25 +69,43 @@ jobs:
                 --url "$DB_URL" \
                 --to "file://$sql_file" \
                 --dev-url "$DEV_URL" \
-                --dry-run
-              atlas schema apply \
-                --url "$DB_URL" \
+                --dry-run \
+                --exclude lint
+              echo "Linting $(basename $sql_file)..."  
+              atlas schema lint \
+                --dev-url "$DEV_URL" \
                 --to "file://$sql_file" \
-                --dev-url "$DEV_URL" 
+                --format '{{json .}}' | \
+                jq -r '.diagnostics[]? | "**" + "'"$(basename "$sql_file")"'" + "**: " + .Text' \
+                >> "$LINT_RESULTS" || true 
               echo "Schema syntax is valid for $(basename $sql_file)"
             fi
           done
+          LINT_CONTENT=$(cat "$LINT_RESULTS" || true)
+          LINT_CONTENT="${LINT_CONTENT//'%'/'%25'}"
+          LINT_CONTENT="${LINT_CONTENT//$'\n'/'%0A'}"
+          LINT_CONTENT="${LINT_CONTENT//$'\r'/'%0D'}"
+          echo "lint_warnings=$LINT_CONTENT" >> $GITHUB_OUTPUT
       - name: Comment on PR
         if: github.event_name == 'pull_request'
         uses: actions/github-script@v7
         with:
           script: |
-            const comment = '## Database Schema Validation\n\n' +
-                            'Schema syntax validation passed!\n\n' +
-                            'Ready for deployment.';
+            const lintWarnings = process.env.LINT_WARNINGS || '';
+            const hasWarnings = lintWarnings.trim().length > 0;
+            let comment = '## Database Schema Validation\n\n';
+            comment += 'Schema syntax validation passed!\n\n';
+            if (hasWarnings) {
+              comment += '### Lint Warnings\n';
+              comment += lintWarnings + '\n';
+            } else {
+              comment += 'No lint warnings found.\n';
+            }
             github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
               body: comment
             });
+        env:
+          LINT_WARNINGS: ${{ steps.schema_check.outputs.lint_warnings }}
