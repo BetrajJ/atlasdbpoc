@@ -58,6 +58,10 @@ jobs:
               echo "Extracted SQL for $schema_name"
             fi
           done
+      - name: Lint SQL files with Squawk
+        uses: sbdchd/squawk-action@v1
+        with:
+          pattern: /tmp/schemas/*.sql
       - name: Test schema syntax
         run: |
           DB_URL="postgres://postgres:postgres@localhost:5432/testdb?sslmode=disable"
@@ -71,42 +75,20 @@ jobs:
                 --dev-url "$DEV_URL" \
                 --dry-run \
                 --exclude lint
-              echo "Linting $(basename $sql_file)..."  
-              atlas schema lint \
-                --url "$DB_URL" \
-                --dev-url "$DEV_URL" \
-                file://$sql_file \
-                --format '{{json .}}' | jq -r \
-                '.diagnostics[]? | "::warning file='"$sql_file"',line=\(.Pos.Line),col=\(.Pos.Column)::\(.Text)"' \
-                | tee -a "$LINT_RESULTS" 
-              echo "Schema syntax is valid for $(basename $sql_file)"
+                echo "Schema syntax is valid for $(basename $sql_file)"
             fi
           done
-          LINT_CONTENT=$(cat "$LINT_RESULTS" || true)
-          LINT_CONTENT="${LINT_CONTENT//'%'/'%25'}"
-          LINT_CONTENT="${LINT_CONTENT//$'\n'/'%0A'}"
-          LINT_CONTENT="${LINT_CONTENT//$'\r'/'%0D'}"
-          echo "lint_warnings=$LINT_CONTENT" >> $GITHUB_OUTPUT
       - name: Comment on PR
         if: github.event_name == 'pull_request'
         uses: actions/github-script@v7
         with:
           script: |
-            const lintWarnings = process.env.LINT_WARNINGS || '';
-            const hasWarnings = lintWarnings.trim().length > 0;
-            let comment = '## Database Schema Validation\n\n';
-            comment += 'Schema syntax validation passed!\n\n';
-            if (hasWarnings) {
-              comment += '### Lint Warnings\n';
-              comment += lintWarnings + '\n';
-            } else {
-              comment += 'No lint warnings found.\n';
-            }
+            const comment = '## Database Schema Validation\n\n' +
+                            'Schema syntax validation passed!\n\n' +
+                            'Ready for Merging.';
             github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
               body: comment
             });
-        env:
-          LINT_WARNINGS: ${{ steps.schema_check.outputs.lint_warnings }}
