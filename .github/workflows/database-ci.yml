@@ -39,11 +39,14 @@ jobs:
           export PATH="$HOME/.atlas/bin:$PATH"
           echo "Atlas CLI installed:"
           atlas version
-      - name: Install yq
+      - name: Install jq & yq
         run: |
           sudo wget -qO /usr/local/bin/yq \
             https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
           sudo chmod +x /usr/local/bin/yq
+          sudo wget -qO /usr/local/bin/jq \
+            https://github.com/stedolan/jq/releases/latest/download/jq-linux64
+          sudo chmod +x /usr/local/bin/jq
       - name: Extract SQL from YAML files
         run: |
           mkdir -p /tmp/schemas
@@ -55,6 +58,10 @@ jobs:
               echo "Extracted SQL for $schema_name"
             fi
           done
+      - name: Lint SQL files with Squawk
+        uses: sbdchd/squawk-action@v1
+        with:
+          pattern: /tmp/schemas/*.sql
       - name: Test schema syntax
         run: |
           DB_URL="postgres://postgres:postgres@localhost:5432/testdb?sslmode=disable"
@@ -66,8 +73,9 @@ jobs:
                 --url "$DB_URL" \
                 --to "file://$sql_file" \
                 --dev-url "$DEV_URL" \
-                --dry-run
-              echo "Schema syntax is valid for $(basename $sql_file)"
+                --dry-run \
+                --exclude lint
+                echo "Schema syntax is valid for $(basename $sql_file)"
             fi
           done
       - name: Comment on PR
@@ -77,7 +85,7 @@ jobs:
           script: |
             const comment = '## Database Schema Validation\n\n' +
                             'Schema syntax validation passed!\n\n' +
-                            'Ready for deployment.';
+                            'Ready for Merging.';
             github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
