@@ -73,10 +73,12 @@ jobs:
                 --exclude lint
               echo "Linting $(basename $sql_file)..."  
               atlas schema lint \
-                file://$sql_file \
+                --url "$DB_URL" \
                 --dev-url "$DEV_URL" \
+                file://$sql_file \
                 --format '{{json .}}' | jq -r \
-                '.diagnostics[]? | "::warning file='"$sql_file"',line=\(.Pos.Line),col=\(.Pos.Column)::\(.Text)"' 
+                '.diagnostics[]? | "::warning file='"$sql_file"',line=\(.Pos.Line),col=\(.Pos.Column)::\(.Text)"' \
+                | tee -a "$LINT_RESULTS" 
               echo "Schema syntax is valid for $(basename $sql_file)"
             fi
           done
