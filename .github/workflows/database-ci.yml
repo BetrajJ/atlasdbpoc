@@ -73,8 +73,7 @@ jobs:
                 --url "$DB_URL" \
                 --to "file://$sql_file" \
                 --dev-url "$DEV_URL" \
-                --dry-run \
-                --exclude lint
+                --dry-run 
                 echo "Schema syntax is valid for $(basename $sql_file)"
             fi
           done
