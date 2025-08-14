@@ -11,6 +11,13 @@ spec:
     secretKeyRef:
       name: postgres-credentials
       key: dev-url
+
+  # Schema from ConfigMap
+  schema:
+    configMapKeyRef:
+      name: postgres-schema-config
+      key: schema.sql
+    
   # Define policies to handle existing database safely
   policy:
     diff:
@@ -22,7 +29,7 @@ spec:
         error: false        # Block destructive changes
   schema:
     sql: |
-      -- PostgreSQL Schema - Updated to match latest DBA specification
+      -- PostgreSQL Schema - latest DBA specification
 
       -- URLs Table (Updated - no domain foreign key, direct domain_name column)
       CREATE TABLE IF NOT EXISTS urls(
